@@ -1,7 +1,12 @@
 # encoding=utf-8
 
+# author: seongcheol jeon
+# email: saelly55@gmail.com
+
+
 import sys
 import pathlib
+import argparse
 import threading
 
 import srt
@@ -9,13 +14,21 @@ from google_trans_new import google_translator
 
 
 class SrtTranslator:
-    def __init__(self, root_dirpath: str = '') -> None:
-        self.__root_dirpath = pathlib.Path(root_dirpath)
+    def __init__(self) -> None:
+        _parser = argparse.ArgumentParser(description='srt file translator')
+        _parser.add_argument(
+            '--rootdir', '-r', help='This is the directory where the srt files are located.', required=True, type=str)
+        _parser.add_argument(
+            '--lang-source', '-ls', help='The language of the file to be translated.', default='en', type=str)
+        _parser.add_argument(
+            '--lang-target', '-lt', help='The language to translate.', default='ko', type=str)
+        self.__args = _parser.parse_args()
+        self.__root_dirpath = pathlib.Path(r'{0}'.format(self.__args.rootdir))
         if not self.__root_dirpath.exists():
-            sys.stderr.write('[error] "{0}" not exists\n'.format(root_dirpath))
+            sys.stderr.write('[error] "{0}" not exists\n'.format(self.__root_dirpath.absolute()))
             sys.exit(1)
-        self.__src_trans_lang = 'en'
-        self.__dst_trans_lang = 'ko'
+        self.__src_trans_lang = self.__args.lang_source
+        self.__dst_trans_lang = self.__args.lang_target
         self.__origin_dirpath = self.__root_dirpath / '_origin_'
         self.__translate_dirpath = self.__root_dirpath / '_translate_'
         self.__srt_filelist = list(self.__root_dirpath.glob('*.srt'))
@@ -77,6 +90,7 @@ class TranslateThread(threading.Thread):
         """
         with self.__src_file.open('rt') as fp:
             file_contents = fp.read()
+        filename = self.__src_file.name
         google_trans = google_translator()
         subtitles = list()
         for sub in srt.parse(file_contents):
@@ -85,7 +99,7 @@ class TranslateThread(threading.Thread):
             tmp_sub = srt.Subtitle(
                 index=sub.index, start=sub.start, end=sub.end,
                 content=translated_content, proprietary=sub.proprietary)
-            sys.stdout.write('{0}: {1}\n'.format(tmp_sub.index, tmp_sub.content))
+            sys.stdout.write('[{0}][{1}]: {2}\n'.format(filename, tmp_sub.index, tmp_sub.content))
             subtitles.append(tmp_sub)
         # 번역된 srt 파일 쓰기
         dst_file = self.__dst_dirpath / self.__src_file.name
@@ -94,10 +108,7 @@ class TranslateThread(threading.Thread):
 
 
 if __name__ == '__main__':
-    rdirpath = r'E:\Download'
-
-    srt_trans = SrtTranslator(root_dirpath=rdirpath)
+    srt_trans = SrtTranslator()
     srt_trans.multi_translate()
     srt_trans.move_to_origin_dir()
-
 
