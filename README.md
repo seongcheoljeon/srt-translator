@@ -12,6 +12,7 @@ Python3
 pip3 install -r requirements.txt
 ```
 
+### Run
 ```shell script
 python main.py --rootdir=<srt directory path> --lang-source=[source language] --lang-target=[target language]
 # or
